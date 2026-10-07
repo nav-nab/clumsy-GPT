@@ -2,6 +2,15 @@
 
 Make a language model slip the way people do: occasionally say a word that is closely associated with a neighbouring word, instead of the one that fits.
 
+## The idea
+
+People make two kinds of word slip.
+
+- **Substitution:** they say "pass the pepper" when they meant "salt".
+- **Intrusion:** the word they just said pulls in a related one, so "nurse" follows "doctor" where it does not belong.
+
+In both cases the slip is related to a nearby word but wrong for the sentence. LLMs almost never do this. ClumsyGPT injects both kinds on purpose and watches how the model recovers.
+
 ## 👉 [Try it in your browser](https://navid-math-ai--clumsygpt-web.modal.run/)
 
 No install, no sign-up. It is a free demo on shared hardware, so the first visit after a quiet spell can take a minute or two to wake up, and each generation takes about 15 seconds.
@@ -36,15 +45,6 @@ Running locally has two advantages: it is not shared with other visitors, and it
 ## Using the app
 
 The text box at the top is where everything happens. Type an opening or load one from the dropdown, set the four sliders and press Generate. The generated text is added to the box, so pressing Generate again continues it. With **Highlight slips** on, the text is shown read-only and each slip is coloured, and hovering over one shows a box reading "What I meant to say was: X", where X is the word that was discarded. Untick it to edit the text. A line under the button lists the slips of the latest run and says how many words were eligible. The sliders are explained in [Knobs](#knobs) below.
-
-## The idea
-
-People make two kinds of word slip.
-
-- **Substitution:** they say "pass the pepper" when they meant "salt".
-- **Intrusion:** the word they just said pulls in a related one, so "nurse" follows "doctor" where it does not belong.
-
-In both cases the slip is related to a nearby word but wrong for the sentence. LLMs almost never do this. ClumsyGPT injects both kinds on purpose and watches how the model recovers.
 
 ## How it works
 
