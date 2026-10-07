@@ -24,10 +24,10 @@ image = (
     .add_local_file("openings.txt", "/root/openings.txt")
 )
 
-modal_app = modal.App("clumsygpt", image=image)
+app = modal.App("clumsygpt", image=image)
 
 
-@modal_app.function(
+@app.function(
     cpu=1.0,  # one physical core (two vCPUs)
     memory=(3072, 4096),  # MiB: reserved, and the most it may use
     max_containers=1,  # Gradio keeps its queue in memory, so there must be one container
