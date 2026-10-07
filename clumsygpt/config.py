@@ -17,5 +17,5 @@ MIN_WORD_LENGTH = 3
 # GUI sliders: (default, minimum, maximum).
 CLUMSINESS = (0.1, 0.0, 0.3)
 LOOSENESS = (0.05, 0.01, 0.3)
-TOP_K = (1000, 10, 5000)
+TOP_K = (100, 10, 5000)
 SLIP_TYPE = (0.0, 0.0, 1.0)
