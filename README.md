@@ -2,7 +2,7 @@
 
 Make a language model slip the way people do: occasionally say a word that is closely associated with a neighbouring word, instead of the one that fits.
 
-**Status:** design only, no code yet. This is a qualitative project. There are no metrics. Success means reading the output and finding it convincingly human.
+**Status:** working prototype. This is a qualitative project. There are no metrics. Success means reading the output and finding it convincingly human.
 
 ## The idea
 
@@ -19,21 +19,25 @@ It is a thin layer around ordinary sampling. The transformer is untouched and th
 
 1. The model samples the next token as usual (temperature 0.7).
 2. If the token starts a new word, run a Bernoulli trial with probability **c**. If it fails, keep the token.
-3. If it passes, discard the token. This is the word the model meant to say. Take the model's **top K** whole-word candidates at that position. Exclude the discarded word and the previous word.
+3. If it passes, discard the token. This is the word the model meant to say. Take the model's **top K** candidates among the allowed words (below) at that position.
 4. Score each candidate as `(1 − s) · cos(candidate, discarded word) + s · cos(candidate, previous word)`. Here `cos` is cosine similarity of token embeddings, and **s** is the slip type. At s = 0 this is pure substitution. At s = 1 it is pure intrusion.
 5. Softmax the scores with temperature **τ** and sample one word. That word is the slip.
 6. The slip goes back into the context, and the model carries on from it.
 
-The trial is skipped when a word being scored against is a fragment, a function word or punctuation. The neighbours of "the" or "," are meaningless. Only the discarded word counts at s = 0, only the previous word at s = 1, and both count in between.
+**Allowed words** are whole content words with the same capitalisation as the discarded word. The discarded word and the previous word are left out, along with their case variants and inflections (salt/salts, know/knew).
+
+The trial is skipped when a word being scored against is a fragment, a function word or punctuation. The neighbours of "the" or "," are meaningless. Only the discarded word counts at s = 0, only the previous word at s = 1, and both count in between. Between the extremes fewer words qualify, so Clumsiness needs to be higher.
 
 ## Knobs
 
-| Symbol | GUI name | Meaning | Default |
+| Symbol | GUI name | Meaning | Default (range) |
 |---|---|---|---|
-| c | Clumsiness | Chance that each new word is replaced by a slip | tune (expect low values) |
-| τ | Looseness | Low: nearly always the closest neighbour. High: more distant neighbours | tune |
-| K | Top-K | Size of the model's shortlist | 1000 |
-| s | Slip type | 0: substitution, scored against the intended word. 1: intrusion, scored against the previous word. In between: a blend | tune |
+| c | Clumsiness | Chance that each eligible word is replaced by a slip | 0.1 (0 to 0.3) |
+| τ | Looseness | Low: nearly always the closest neighbour. High: more distant neighbours | 0.05 (0.01 to 0.3) |
+| K | Top-K | Size of the model's shortlist | 1000 (10 to 5000) |
+| s | Slip type | 0: substitution, scored against the intended word. 1: intrusion, scored against the previous word. In between: a blend | 0 (0 to 1) |
+
+Looseness above about 0.2 gives mostly noise. About a quarter of generated tokens are eligible for a trial at s = 0, and a fifth at s = 1, so at c = 0.1 roughly 2 to 3% of words slip.
 
 ## Design decisions
 
@@ -41,15 +45,33 @@ The trial is skipped when a word being scored against is a fragment, a function 
 - **Two slip types, one slider:** substitution is a well-documented kind of human slip. Intrusion is the word-association slip from the original idea. Mixing the two similarity scores before the softmax makes the endpoints the pure types, with a blend in between.
 - **Association:** cosine similarity of token embeddings, mean-centred first. Raw query-key dot products were rejected. Attention scores say where to read from, not which words are related.
 - **Shortlist from the model:** the slip is drawn from the model's own top K, then reweighted by association. This keeps the grammar roughly intact, so the result reads as a human slip and not a glitch.
+- **What counts as a word:** a token that is a space followed by letters. It must be at least three letters and frequent enough in the `wordfreq` list (Zipf 2.5, or 3.5 for three letters and 3.0 for four). Function words are never candidates.
+- **No inflections as slips:** without this filter, most nearest neighbours were grammatical variants ("doctor" to "doctors", "know" to "knew"). Variants are removed by spelling and by dictionary form (`lemminflect`). A few derived forms still get through ("sell" to "sale").
 - **Consecutive slips are allowed.** Forbidding them later is a one-line change.
 - **Sampling, not greedy,** for the model's own words. The temperature is fixed.
 
 Left out for now: sound-based slips, a random-word control, model comparisons and K sweeps. Add them only if the first outputs raise a question they would answer.
 
-## Interface (planned)
+## Run it
 
-A Gradio app. Type an opening or pick one from a dropdown. Sliders set Clumsiness, Looseness, Top-K and Slip type. Slips are highlighted in the output.
+```
+pip install -r requirements.txt
+python app.py
+```
 
-## Openings
+The first run downloads the model (about 1 GB). It uses CUDA or Apple Silicon if present, and otherwise the CPU. A 150-token generation takes about 15 seconds on a 2-core CPU. Every run uses a fresh random seed.
 
-`openings.txt` holds 100 text openings, one per line. 85 are dialogue and 15 are narrative or explanatory, for contrast. Each stops mid-sentence with no trailing space, so the model supplies the next token.
+Type an opening or pick one from the dropdown, set the four sliders and press Generate. Slips are highlighted, with the intended word shown on hover. A line below lists them and says how many words were eligible.
+
+Settings that are not in the GUI live in `clumsygpt/config.py`: maximum new tokens (150), the sampling temperature, the word-frequency thresholds, and the slider defaults and ranges.
+
+Tests use fake models, so they need no download: `pip install pytest && pytest`.
+
+## Code
+
+- `app.py`: the Gradio GUI.
+- `clumsygpt/generate.py`: the generation loop and the slip trial.
+- `clumsygpt/slips.py`: which words are allowed, and scoring and sampling the slip.
+- `clumsygpt/vocab.py`: classifies every token as a word, a content word, its capitalisation and its dictionary form.
+- `clumsygpt/config.py`: settings.
+- `openings.txt`: 100 text openings, one per line. 85 are dialogue and 15 are narrative or explanatory, for contrast. Each stops mid-sentence with no trailing space, so the model supplies the next token.
