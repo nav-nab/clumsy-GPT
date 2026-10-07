@@ -6,7 +6,7 @@ Make a language model slip the way people do: occasionally say a word that is cl
 
 No install, no sign-up. It is a free demo on shared hardware, so the first visit after a quiet spell can take a minute or two to wake up, and each generation takes about 15 seconds.
 
-**Status:** working prototype. This is a qualitative project. There are no metrics. Success means reading the output and finding it convincingly human.
+**Status:** working prototype. This is a qualitative project. There are no metrics. Success means having fun.
 
 ## Try it
 
