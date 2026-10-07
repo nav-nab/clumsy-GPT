@@ -59,6 +59,8 @@ pip install -r requirements.txt
 python app.py
 ```
 
+If you see "PyTorch >= 2.5 is required", `transformers` is too new for your PyTorch. Run `pip install -r requirements.txt` again, since it pins `transformers<5`. The code is tested with PyTorch 2.2.2 and with current PyTorch. On PyTorch 2.2.2 with NumPy 2, a long NumPy warning appears at start-up. It is harmless, and `pip install "numpy<2"` silences it.
+
 The first run downloads the model (about 1 GB). It uses CUDA or Apple Silicon if present, and otherwise the CPU. A 150-token generation takes about 15 seconds on a 2-core CPU. Every run uses a fresh random seed.
 
 Type an opening or pick one from the dropdown, set the four sliders and press Generate. Slips are highlighted, with the intended word shown on hover. A line below lists them and says how many words were eligible.

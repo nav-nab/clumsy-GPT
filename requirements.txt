@@ -1,5 +1,6 @@
 torch
-transformers
+# transformers 5 needs PyTorch 2.5 or later. Intel Macs cannot install that (their last PyTorch is 2.2.2).
+transformers<5
 gradio
 wordfreq
 lemminflect
