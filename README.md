@@ -13,9 +13,7 @@ In both cases the slip is related to a nearby word but wrong for the sentence. L
 
 ## 👉 [Try it in your browser](https://navid-math-ai--clumsygpt-web.modal.run/)
 
-No install, no sign-up. It is a free demo on shared hardware, so the first visit after a quiet spell can take a minute or two to wake up, and each generation takes about 15 seconds.
-
-**Status:** working prototype. This is a qualitative project. There are no metrics. Success means having fun.
+No install, no sign-up. It is a demo on shared hardware, so the first visit after a quiet spell can take a minute or two to wake up, and each generation takes about 15 seconds.
 
 ## Try it
 
