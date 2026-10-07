@@ -63,7 +63,7 @@ If you see "PyTorch >= 2.5 is required", `transformers` is too new for your PyTo
 
 The first run downloads the model (about 1 GB). It uses CUDA or Apple Silicon if present, and otherwise the CPU. A 150-token generation takes about 15 seconds on a 2-core CPU. Every run uses a fresh random seed.
 
-Type an opening or pick one from the dropdown, set the four sliders and press Generate. Slips are highlighted, with the intended word shown on hover. A line below lists them and says how many words were eligible.
+The text box at the top is where everything happens. Type an opening or load one from the dropdown, set the four sliders and press Generate. The generated text is added to the box, so pressing Generate again continues it. With Highlight slips on, the text is shown read-only and each slip is coloured, with the intended word on hover. Untick it to edit the text. A line under the button lists the slips of the latest run and says how many words were eligible.
 
 Settings that are not in the GUI live in `clumsygpt/config.py`: maximum new tokens (150), the sampling temperature, the word-frequency thresholds, and the slider defaults and ranges.
 

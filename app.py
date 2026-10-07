@@ -10,6 +10,20 @@ from clumsygpt.generate import ClumsyGenerator
 
 OPENINGS_FILE = Path(__file__).parent / "openings.txt"
 
+# A slip is shown by colouring its text. The colour is muted, and lighter in dark mode.
+# The selectors are two classes deep so that they win over the theme's own text colour.
+SLIP_STYLE = (
+    "<style>.clumsy-view .clumsy-slip{color:#b0583a;cursor:help}"
+    ".dark .clumsy-view .clumsy-slip{color:#e8a07a}</style>"
+)
+
+# The read-only view copies the look of the text box so that switching between them is not jarring.
+VIEW_STYLE = (
+    "white-space: pre-wrap; line-height: 1.7; min-height: 18em; padding: 12px; "
+    "color: var(--body-text-color); background: var(--input-background-fill); "
+    "border: 1px solid var(--border-color-primary); border-radius: var(--radius-lg);"
+)
+
 
 def load_openings():
     """One opening per line. Trailing spaces are kept: the model supplies the next space."""
@@ -17,18 +31,41 @@ def load_openings():
     return [line for line in text.splitlines() if line.strip()]
 
 
-def render(result):
-    """The generated text as one paragraph, with each slip marked and its intended word on hover."""
+def to_marked(result):
+    """The generated text as (text, intended word) pairs. The intended word is None unless the text is a slip."""
     intended = iter(result.slips)
+    return [(text, next(intended)[0] if label == "slip" else None) for text, label in result.segments]
+
+
+def join_text(marked):
+    return "".join(text for text, _ in marked)
+
+
+def render_marked(marked):
+    """The text as one paragraph, with slips coloured and their intended word shown on hover."""
     parts = []
-    for text, label in result.segments:
-        if label == "slip":
-            old, _ = next(intended)
-            parts.append(f'<mark title="intended: {html.escape(old)}">{html.escape(text)}</mark>')
+    for text, intended in marked:
+        escaped = html.escape(text)
+        if intended is None:
+            parts.append(escaped)
         else:
-            parts.append(html.escape(text))
-    style = "white-space: pre-wrap; line-height: 1.8; font-size: 1.05em;"
-    return f'<div style="{style}">{"".join(parts)}</div>'
+            title = html.escape(intended)
+            parts.append(f'<span class="clumsy-slip" title="intended: {title}">{escaped}</span>')
+    return f'{SLIP_STYLE}<div class="clumsy-view" style="{VIEW_STYLE}">{"".join(parts)}</div>'
+
+
+def layout(text, marked, highlight):
+    """Updates for the text box and the highlighted view, of which only one is visible.
+
+    The highlighted view is shown when highlighting is on and the text is still
+    exactly what was generated. If the text was edited, the highlights no longer
+    line up with it, so the plain text box is shown.
+    """
+    show_view = bool(highlight and marked and join_text(marked) == text)
+    return (
+        gr.update(value=text, visible=not show_view),
+        gr.update(value=render_marked(marked) if show_view else "", visible=show_view),
+    )
 
 
 def summarise(result):
@@ -45,17 +82,41 @@ def build_app(generator):
         for i, line in enumerate(openings, start=1)
     ]
 
-    def run(opening, clumsiness, looseness, top_k, slip_type):
-        if not opening or not opening.strip():
+    def run(text, clumsiness, looseness, top_k, slip_type, marked, highlight):
+        if not text or not text.strip():
             raise gr.Error("Type an opening or pick one from the list.")
-        result = generator.generate(opening, clumsiness, looseness, int(top_k), slip_type)
-        return render(result), summarise(result)
+        result = generator.generate(text, clumsiness, looseness, int(top_k), slip_type)
+        # Keep the highlights from earlier runs when this continues text that was generated before.
+        earlier = marked if marked and join_text(marked) == text else [(text, None)]
+        marked = earlier + to_marked(result)[1:]  # the first segment is the opening itself
+        return (marked, summarise(result)) + layout(join_text(marked), marked, highlight)
+
+    def on_toggle(text, marked, highlight):
+        return layout(text, marked, highlight)
+
+    def on_pick(opening):
+        if not opening:
+            return gr.update(), gr.update(), gr.update()
+        return gr.update(value=opening, visible=True), [], gr.update(value="", visible=False)
 
     with gr.Blocks(title="ClumsyGPT") as demo:
+        marked = gr.State([])
         gr.Markdown("# ClumsyGPT\nA language model that sometimes says the wrong, but related, word.")
-        picker = gr.Dropdown(choices=choices, value=None, label="Pick an opening")
-        opening = gr.Textbox(label="Opening (editable)", lines=4)
-        picker.change(lambda text: text if text else gr.update(), picker, opening)
+
+        text = gr.Textbox(
+            label="Text", lines=12, max_lines=40,
+            placeholder="Type an opening, or pick one below. Each Generate continues the text.",
+        )
+        view = gr.HTML(visible=False)
+
+        with gr.Row():
+            picker = gr.Dropdown(choices=choices, value=None, label="Load an opening", scale=4)
+            highlight = gr.Checkbox(
+                value=True, label="Highlight slips", scale=1,
+                info="Shows the text read-only. Untick to edit it.",
+            )
+        button = gr.Button("Generate", variant="primary")
+        stats = gr.Markdown()
 
         with gr.Row():
             clumsiness = gr.Slider(
@@ -80,10 +141,13 @@ def build_app(generator):
                 info="0: substitution (the intended word). 1: intrusion (the previous word)",
             )
 
-        button = gr.Button("Generate", variant="primary")
-        output = gr.HTML(label="Output")
-        stats = gr.Markdown()
-        button.click(run, [opening, clumsiness, looseness, top_k, slip_type], [output, stats])
+        picker.change(on_pick, picker, [text, marked, view])
+        highlight.change(on_toggle, [text, marked, highlight], [text, view])
+        button.click(
+            run,
+            [text, clumsiness, looseness, top_k, slip_type, marked, highlight],
+            [marked, stats, text, view],
+        )
     return demo
 
 
