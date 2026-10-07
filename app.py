@@ -10,17 +10,6 @@ from clumsygpt.generate import ClumsyGenerator
 
 OPENINGS_FILE = Path(__file__).parent / "openings.txt"
 
-# On a Hugging Face ZeroGPU Space, a GPU is attached only while a function marked with
-# spaces.GPU runs. Elsewhere the package is absent, and the marker does nothing.
-try:
-    import spaces
-
-    gpu = spaces.GPU(duration=30)
-except ImportError:
-
-    def gpu(function):
-        return function
-
 # A slip is shown by colouring its text. The selectors are two classes deep so that they
 # win over the theme's own text colour.
 SLIP_STYLE = (
@@ -125,14 +114,10 @@ def build_app(generator):
         for i, line in enumerate(openings, start=1)
     ]
 
-    @gpu
-    def generate(text, clumsiness, looseness, top_k, slip_type):
-        return generator.generate(text, clumsiness, looseness, top_k, slip_type)
-
     def run(text, clumsiness, looseness, top_k, slip_type, marked, highlight):
         if not text or not text.strip():
             raise gr.Error("Type an opening or pick one from the list.")
-        result = generate(text, clumsiness, looseness, int(top_k), slip_type)
+        result = generator.generate(text, clumsiness, looseness, int(top_k), slip_type)
         # Keep the highlights from earlier runs when this continues text that was generated before.
         earlier = marked if marked and join_text(marked) == text else [(text, None)]
         marked = earlier + to_marked(result)[1:]  # the first segment is the opening itself

@@ -52,13 +52,8 @@ class ClumsyGenerator:
         else:
             device = "cpu"
         tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModelForCausalLM.from_pretrained(model_name).float().eval()
-        # The constructor reads the embeddings, so it runs while the model is still on the CPU.
-        # Only then is the model moved. (On a ZeroGPU Space, "cuda" is emulated until a GPU is attached.)
-        generator = cls(model, tokenizer, "cpu")
-        model.to(device)
-        generator.device = device
-        return generator
+        model = AutoModelForCausalLM.from_pretrained(model_name).float().to(device).eval()
+        return cls(model, tokenizer, device)
 
     def _forward(self, ids, past):
         """Run the model on new token ids; return next-token logits (on the CPU) and the cache."""
