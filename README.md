@@ -69,9 +69,22 @@ Settings that are not in the GUI live in `clumsygpt/config.py`: maximum new toke
 
 Tests use fake models, so they need no download: `pip install pytest && pytest`.
 
+### Put it online
+
+`modal_app.py` serves the same app on [Modal](https://modal.com), so visitors can use it in a browser without installing anything. It runs on one CPU core and sleeps when nobody is using it. The first visitor after a quiet spell waits a short while for it to wake up.
+
+```
+pip install modal
+modal setup
+modal deploy modal_app.py
+```
+
+The last command prints the public URL. Run it again after any change to redeploy. Modal bills for the seconds the container is awake, so set a spending limit in your Modal billing settings before sharing the link.
+
 ## Code
 
 - `app.py`: the Gradio GUI.
+- `modal_app.py`: serves the GUI on Modal.
 - `clumsygpt/generate.py`: the generation loop and the slip trial.
 - `clumsygpt/slips.py`: which words are allowed, and scoring and sampling the slip.
 - `clumsygpt/vocab.py`: classifies every token as a word, a content word, its capitalisation and its dictionary form.
