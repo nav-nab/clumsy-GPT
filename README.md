@@ -2,7 +2,40 @@
 
 Make a language model slip the way people do: occasionally say a word that is closely associated with a neighbouring word, instead of the one that fits.
 
+## 👉 [Try it in your browser](https://navid-math-ai--clumsygpt-web.modal.run/)
+
+No install, no sign-up. It is a free demo on shared hardware, so the first visit after a quiet spell can take a minute or two to wake up, and each generation takes about 15 seconds.
+
 **Status:** working prototype. This is a qualitative project. There are no metrics. Success means reading the output and finding it convincingly human.
+
+## Try it
+
+### In your browser
+
+1. Open the [demo](https://navid-math-ai--clumsygpt-web.modal.run/).
+2. Pick a starting line from the **Load an opening** menu, or type your own in the text box.
+3. Press **Generate**. The model continues your text.
+4. Slips appear in colour. **Hover over one** to see the word the model meant to say.
+5. Press **Generate** again to keep going, or turn up **Clumsiness** for more slips.
+
+### On your own computer
+
+You need Python 3.10 or newer and about 1 GB of free disk space for the model. A GPU is not required.
+
+```
+git clone https://github.com/nav-nab/clumsy-GPT.git
+cd clumsy-GPT
+pip install -r requirements.txt
+python app.py
+```
+
+Then open the address it prints (usually http://127.0.0.1:7860) in your browser. The first run downloads the model, which takes a few minutes. After that it starts quickly.
+
+Running locally has two advantages: it is not shared with other visitors, and it uses your GPU or Apple Silicon chip if you have one. On a 2-core CPU a 150-token generation takes about 15 seconds.
+
+## Using the app
+
+The text box at the top is where everything happens. Type an opening or load one from the dropdown, set the four sliders and press Generate. The generated text is added to the box, so pressing Generate again continues it. With **Highlight slips** on, the text is shown read-only and each slip is coloured, and hovering over one shows a box reading "What I meant to say was: X", where X is the word that was discarded. Untick it to edit the text. A line under the button lists the slips of the latest run and says how many words were eligible. The sliders are explained in [Knobs](#knobs) below.
 
 ## The idea
 
@@ -52,39 +85,18 @@ Looseness above about 0.2 gives mostly noise. About a quarter of generated token
 
 Left out for now: sound-based slips, a random-word control, model comparisons and K sweeps. Add them only if the first outputs raise a question they would answer.
 
-## Run it
-
-```
-pip install -r requirements.txt
-python app.py
-```
+## Running locally: notes
 
 If you see "PyTorch >= 2.5 is required", `transformers` is too new for your PyTorch. Run `pip install -r requirements.txt` again, since it pins `transformers<5`. The code is tested with PyTorch 2.2.2 and with current PyTorch. On PyTorch 2.2.2 with NumPy 2, a long NumPy warning appears at start-up. It is harmless, and `pip install "numpy<2"` silences it.
 
-The first run downloads the model (about 1 GB). It uses CUDA or Apple Silicon if present, and otherwise the CPU. A 150-token generation takes about 15 seconds on a 2-core CPU. Every run uses a fresh random seed.
-
-The text box at the top is where everything happens. Type an opening or load one from the dropdown, set the four sliders and press Generate. The generated text is added to the box, so pressing Generate again continues it. With Highlight slips on, the text is shown read-only and each slip is coloured, and hovering over one shows a box reading "What I meant to say was: X", where X is the word that was discarded. Untick it to edit the text. A line under the button lists the slips of the latest run and says how many words were eligible.
-
-Settings that are not in the GUI live in `clumsygpt/config.py`: maximum new tokens (150), the sampling temperature, the word-frequency thresholds, and the slider defaults and ranges.
+Every run uses a fresh random seed. Settings that are not in the GUI live in `clumsygpt/config.py`: maximum new tokens (150), the sampling temperature, the word-frequency thresholds, and the slider defaults and ranges.
 
 Tests use fake models, so they need no download: `pip install pytest && pytest`.
-
-### Put it online
-
-`modal_app.py` serves the same app on [Modal](https://modal.com), so visitors can use it in a browser without installing anything. It runs on one CPU core and sleeps when nobody is using it. The first visitor after a quiet spell waits a short while for it to wake up.
-
-```
-pip install modal
-modal setup
-modal deploy modal_app.py
-```
-
-The last command prints the public URL. Run it again after any change to redeploy. Modal bills for the seconds the container is awake, so set a spending limit in your Modal billing settings before sharing the link.
 
 ## Code
 
 - `app.py`: the Gradio GUI.
-- `modal_app.py`: serves the GUI on Modal.
+- `modal_app.py`: the set-up for the hosted demo.
 - `clumsygpt/generate.py`: the generation loop and the slip trial.
 - `clumsygpt/slips.py`: which words are allowed, and scoring and sampling the slip.
 - `clumsygpt/vocab.py`: classifies every token as a word, a content word, its capitalisation and its dictionary form.
