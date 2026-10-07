@@ -10,12 +10,44 @@ from clumsygpt.generate import ClumsyGenerator
 
 OPENINGS_FILE = Path(__file__).parent / "openings.txt"
 
-# A slip is shown by colouring its text. The colour is muted, and lighter in dark mode.
-# The selectors are two classes deep so that they win over the theme's own text colour.
+# A slip is shown by colouring its text. The selectors are two classes deep so that they
+# win over the theme's own text colour.
 SLIP_STYLE = (
     "<style>.clumsy-view .clumsy-slip{color:#b0583a;cursor:help}"
     ".dark .clumsy-view .clumsy-slip{color:#e8a07a}</style>"
 )
+
+# Hovering over (or focusing) a slip shows a box saying what the model meant to say. One box is
+# shared by all slips and is placed with a little script, so that it can be kept inside the window.
+# It sits below the word, or above it when there is no room below.
+TOOLTIP_JS = """
+() => {
+  if (window.__clumsyTip) return;
+  const tip = document.createElement('div');
+  tip.style.cssText = 'position:fixed;display:none;z-index:1000;pointer-events:none;' +
+    'padding:4px 10px;font-size:0.85em;line-height:1.4;border-radius:var(--radius-lg);' +
+    'color:var(--body-text-color);background:var(--background-fill-primary);' +
+    'border:1px solid var(--border-color-primary);box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+  (document.querySelector('.gradio-container') || document.body).appendChild(tip);
+  window.__clumsyTip = tip;
+  const slipOf = (e) => e.target.closest && e.target.closest('.clumsy-slip');
+  const show = (el) => {
+    tip.textContent = el.dataset.tip;
+    tip.style.display = 'block';
+    const r = el.getBoundingClientRect();
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - tip.offsetWidth - 8));
+    let top = r.bottom + 6;
+    if (top + tip.offsetHeight > window.innerHeight - 8) top = r.top - tip.offsetHeight - 6;
+    tip.style.left = left + 'px';
+    tip.style.top = Math.max(8, top) + 'px';
+  };
+  const hide = () => { tip.style.display = 'none'; };
+  for (const [on, off] of [['mouseover', 'mouseout'], ['focusin', 'focusout']]) {
+    document.addEventListener(on, (e) => { const el = slipOf(e); if (el) show(el); });
+    document.addEventListener(off, (e) => { if (slipOf(e)) hide(); });
+  }
+}
+"""
 
 # The read-only view copies the look of the text box so that switching between them is not jarring.
 VIEW_STYLE = (
@@ -42,15 +74,15 @@ def join_text(marked):
 
 
 def render_marked(marked):
-    """The text as one paragraph, with slips coloured and their intended word shown on hover."""
+    """The text as one paragraph, with slips coloured. Each carries what the model meant to say, for the hover box."""
     parts = []
     for text, intended in marked:
         escaped = html.escape(text)
         if intended is None:
             parts.append(escaped)
         else:
-            title = html.escape(intended)
-            parts.append(f'<span class="clumsy-slip" title="intended: {title}">{escaped}</span>')
+            tip = html.escape(f"What I meant to say was: {intended}")
+            parts.append(f'<span class="clumsy-slip" tabindex="0" data-tip="{tip}">{escaped}</span>')
     return f'{SLIP_STYLE}<div class="clumsy-view" style="{VIEW_STYLE}">{"".join(parts)}</div>'
 
 
@@ -141,6 +173,7 @@ def build_app(generator):
                 info="0: substitution (the intended word). 1: intrusion (the previous word)",
             )
 
+        demo.load(None, None, None, js=TOOLTIP_JS)
         picker.change(on_pick, picker, [text, marked, view])
         highlight.change(on_toggle, [text, marked, highlight], [text, view])
         button.click(

@@ -19,7 +19,8 @@ def test_join_text_rebuilds_the_text():
 
 def test_render_marks_slips_and_escapes_text():
     html_text = render_marked(to_marked(RESULT))
-    assert '<span class="clumsy-slip" title="intended: cat"> dog</span>' in html_text
+    assert 'data-tip="What I meant to say was: cat"> dog</span>' in html_text
+    assert "title=" not in html_text  # the styled box replaces the browser's own tooltip
     assert "&lt;b&gt;" in html_text and "<b>" not in html_text
 
 
