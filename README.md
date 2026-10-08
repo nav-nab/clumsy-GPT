@@ -25,7 +25,7 @@ No install and no sign-up. It runs on shared hardware, so the first visit after 
 
 1. Open the [demo](https://navid-math-ai--clumsygpt-web.modal.run/).
 2. Pick a starting line from **Load an opening**, or type your own in the text box.
-3. Press **Generate**. The model continues your text.
+3. Press **Generate**. The model continues your text, and it appears word by word.
 4. Slips show up in colour. **Hover over one** to see the word the model meant to say.
 5. Press **Generate** again to keep going. Turn up **Clumsiness** for more slips.
 
@@ -46,7 +46,7 @@ Running it yourself means no sharing with other visitors, and it uses your GPU o
 
 ## Using the app
 
-Everything happens in the text box. Type an opening or load one, set the sliders and press Generate. New text is added to the box, so Generate again to continue.
+Everything happens in the text box. Type an opening or load one, set the sliders and press Generate. The new text streams in as it is generated, with a progress line under the button. Generate again to continue. Extra clicks while it is running are ignored.
 
 With **Highlight slips** on, the text is read-only and each slip is coloured. Hover over a slip to see "What I meant to say was: X", where X is the word that was discarded. Untick the box to edit the text. A line under the button lists the latest slips and how many words were eligible. The sliders are explained under [Knobs](#knobs).
 
@@ -54,7 +54,7 @@ With **Highlight slips** on, the text is read-only and each slip is coloured. Ho
 
 ClumsyGPT is a thin layer around ordinary sampling. The transformer is untouched and the KV cache stays intact.
 
-1. The model samples the next token as usual (temperature 0.7).
+1. The model samples the next token as usual (temperature 0.7). Chinese, Japanese and Korean tokens are blocked, so they never appear.
 2. If the token starts a new word, run a Bernoulli trial with probability **c**. If it fails, keep the token.
 3. If it passes, discard the token. This is the word the model meant to say. Take the model's **top K** candidates among the allowed words (below) at that position.
 4. Score each candidate as `(1 − s) · cos(candidate, discarded word) + s · cos(candidate, previous word)`. Here `cos` is the cosine similarity of token embeddings, and **s** is the slip type. At s = 0 this is pure substitution. At s = 1 it is pure intrusion.
@@ -92,17 +92,17 @@ Informal notes from reading outputs. They are impressions, not measurements.
 
 If you see "PyTorch >= 2.5 is required", `transformers` is too new for your PyTorch. Run `pip install -r requirements.txt` again, since it pins `transformers<5`. The code is tested with PyTorch 2.2.2 and with current PyTorch. On PyTorch 2.2.2 with NumPy 2, a long NumPy warning appears at start-up. It is harmless, and `pip install "numpy<2"` silences it.
 
-Every run uses a fresh random seed. Settings that are not in the GUI live in `clumsygpt/config.py`: maximum new tokens (150), the sampling temperature, the word-frequency thresholds, and the slider defaults and ranges.
+Every run uses a fresh random seed. Settings that are not in the GUI live in `clumsygpt/config.py`: maximum new tokens (150), the sampling temperature, how many tokens Shrug it off covers, the word-frequency thresholds, and the slider defaults and ranges.
 
 Tests use fake models, so they need no download: `pip install pytest && pytest`.
 
 ## Code
 
-- `app.py`: the Gradio GUI.
+- `app.py`: the Gradio GUI. It streams the text as it is generated.
 - `modal_app.py`: the set-up for the hosted demo.
 - `clumsygpt/generate.py`: the generation loop and the slip trial.
 - `clumsygpt/slips.py`: which words are allowed, and how the slip is scored and sampled.
-- `clumsygpt/vocab.py`: classifies every token as a word, a content word, its capitalisation and its dictionary form.
+- `clumsygpt/vocab.py`: classifies every token as a word, a content word, its capitalisation and its dictionary form. It also lists the Chinese, Japanese and Korean tokens that are blocked.
 - `clumsygpt/config.py`: settings.
 - `openings.txt`: 100 text openings, one per line. 85 are dialogue and 15 are narrative or explanatory, for contrast. Each stops mid-sentence with no trailing space, so the model supplies the next token.
 
