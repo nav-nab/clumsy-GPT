@@ -8,7 +8,7 @@ import torch
 
 from . import config
 from .slips import SlipMaker
-from .vocab import build_vocab_info, token_strings
+from .vocab import blocked_tokens, build_vocab_info, token_strings
 
 
 @dataclass
@@ -39,6 +39,7 @@ class ClumsyGenerator:
         weights = model.get_input_embeddings().weight.detach().float().cpu()
         strings = token_strings(tokenizer, min(len(tokenizer), weights.shape[0]))
         self.vocab = build_vocab_info(strings, weights.shape[0])
+        self.blocked = blocked_tokens(strings, weights.shape[0])
         self.slipper = SlipMaker(weights, self.vocab)
 
     @classmethod
@@ -69,7 +70,10 @@ class ClumsyGenerator:
             mask[0, list(hidden)] = 0
             kwargs["attention_mask"] = mask
         out = self.model(input_ids=input_ids, past_key_values=past, use_cache=True, **kwargs)
-        return out.logits[0, -1].float().cpu(), out.past_key_values
+        logits = out.logits[0, -1].float().cpu()
+        # Blocked tokens (Chinese, Japanese and Korean text) can never be chosen, as the model's own
+        # word or as a slip: both are drawn from these logits.
+        return logits.masked_fill(self.blocked, float("-inf")), out.past_key_values
 
     def _decode(self, ids):
         return self.tokenizer.decode(ids, clean_up_tokenization_spaces=False)

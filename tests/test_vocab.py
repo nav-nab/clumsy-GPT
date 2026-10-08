@@ -1,6 +1,8 @@
 import pytest
 
-from clumsygpt.vocab import LOWER, OTHER, TITLE, build_vocab_info, case_class, lemmas, shares_stem
+from clumsygpt.vocab import (
+    LOWER, OTHER, TITLE, blocked_tokens, build_vocab_info, case_class, lemmas, shares_stem,
+)
 
 STRINGS = [" the", " cat", " Cat", " salt", " xqzvt", "ing", ",", " 12", "The", " I", " nurse"]
 
@@ -28,6 +30,24 @@ def test_words_and_case_classes():
     assert v.words[1] == v.words[2] == "cat"
     assert v.words[5] == "" and v.words[11] == ""
     assert v.case_class.tolist() == [LOWER, LOWER, TITLE, LOWER, LOWER, -1, -1, -1, -1, OTHER, LOWER, -1]
+
+
+@pytest.mark.parametrize(
+    "text, blocked",
+    [
+        ("你好", True), (" 日本", True), ("ひらがな", True), (" カタカナ", True), (" 안녕", True),
+        ("，", True), ("�", True), (" the", False), (" café", False), ("’", False),
+        (" —", False), (" 😀", False), (" Привет", False), (" 12", False), ("ing", False),
+    ],
+)
+def test_blocked_tokens(text, blocked):
+    assert bool(blocked_tokens([text], 1)[0]) is blocked
+
+
+def test_blocked_tokens_never_include_an_english_word():
+    strings = [" the", " cat", " 你好", " salt", "�"]
+    v = build_vocab_info(strings, 5)
+    assert not (blocked_tokens(strings, 5) & v.word_start).any()
 
 
 def test_fragments_and_unknown_ids_are_not_words():

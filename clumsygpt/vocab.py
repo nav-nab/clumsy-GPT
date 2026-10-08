@@ -95,6 +95,27 @@ def token_strings(tokenizer, n):
     return [tokenizer.decode([i]) for i in range(n)]
 
 
+# Chinese, Japanese and Korean text, with their punctuation and full-width forms.
+_CJK = re.compile(
+    "[⺀-⿟　-ヿ㄀-㆏㐀-䶿一-鿿"
+    "가-힯豈-﫿＀-￯\U00020000-\U0002fa1f]"
+)
+
+
+def blocked_tokens(strings, vocab_size):
+    """Tokens the model must never produce: those containing Chinese, Japanese or Korean text.
+
+    Also blocked are tokens that decode to U+FFFD. They are pieces of a multi-byte character, and
+    the pieces of a Chinese character cannot be told apart from the pieces of an emoji, so the few
+    emoji built from several pieces are lost along with them.
+    """
+    blocked = torch.zeros(vocab_size, dtype=torch.bool)
+    for i, text in enumerate(strings[:vocab_size]):
+        if "�" in text or _CJK.search(text):
+            blocked[i] = True
+    return blocked
+
+
 def build_vocab_info(strings, vocab_size, min_zipf=MIN_ZIPF):
     """Classify every token. Ids beyond len(strings) are treated as not words."""
     word_start = torch.zeros(vocab_size, dtype=torch.bool)

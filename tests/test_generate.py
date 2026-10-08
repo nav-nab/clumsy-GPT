@@ -17,24 +17,27 @@ V = len(STRINGS)
 class FakeTokenizer:
     eos_token_id = EOS
 
+    def __init__(self, strings=STRINGS):
+        self.strings = strings
+
     def __len__(self):
-        return V
+        return len(self.strings)
 
     def encode(self, text):
-        return [STRINGS.index(piece) for piece in re.findall(r" ?[^ ]+", text)]
+        return [self.strings.index(piece) for piece in re.findall(r" ?[^ ]+", text)]
 
     def decode(self, ids, clean_up_tokenization_spaces=False):
-        return "".join(STRINGS[i] for i in ids)
+        return "".join(self.strings[i] for i in ids)
 
 
 class FakeModel:
     """Next-token logits depend only on the last token, via a fixed random table."""
 
-    def __init__(self):
+    def __init__(self, n=V):
         g = torch.Generator().manual_seed(0)
-        self.table = torch.randn(V, V, generator=g)
+        self.table = torch.randn(n, n, generator=g)
         self.table[:, EOS] = -1e9  # never stop early
-        self.weight = torch.randn(V, 6, generator=g)
+        self.weight = torch.randn(n, 6, generator=g)
         self.calls = []
         self.masks = []  # the attention mask of each call, as a list of 0s and 1s, or None
 
@@ -157,6 +160,21 @@ def test_shrugging_does_not_change_the_text_when_the_model_ignores_the_mask():
     plain = run(gen, clumsiness=0.5, seed=3)
     shrug = run(gen, clumsiness=0.5, seed=3, shrug_off=True)
     assert plain.text == shrug.text
+
+
+def test_chinese_japanese_and_korean_tokens_are_never_produced():
+    # The model is made to love these tokens: without the block, every word would be one of them.
+    extra = [" 你好", " こんにちは", " 안녕", "�"]
+    strings = STRINGS + extra
+    model = FakeModel(len(strings))
+    model.table[:, V:] = 50.0
+    gen = ClumsyGenerator(model, FakeTokenizer(strings))
+    for clumsiness in (0.0, 1.0):
+        result = gen.generate(
+            " the cat on", clumsiness, 0.1, 1000, 0.0, max_new_tokens=40, seed=1, shrug_off=True
+        )
+        assert result.tokens == 40
+        assert not any(piece in result.text for piece in extra)
 
 
 def test_empty_opening_raises():
