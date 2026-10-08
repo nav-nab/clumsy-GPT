@@ -19,7 +19,7 @@ MIN_ZIPF_SHORT = {3: 3.5, 4: 3.0}  # keyed by word length
 MIN_WORD_LENGTH = 3
 
 # GUI sliders: (default, minimum, maximum).
-CLUMSINESS = (0.1, 0.0, 0.3)
-LOOSENESS = (0.05, 0.01, 0.3)
+CLUMSINESS = (0.2, 0.0, 0.3)
+LOOSENESS = (0.08, 0.01, 0.3)
 TOP_K = (100, 10, 5000)
 SLIP_TYPE = (0.0, 0.0, 1.0)

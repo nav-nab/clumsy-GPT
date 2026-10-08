@@ -70,15 +70,15 @@ The trial is skipped when a word being scored against is a fragment, a function 
 
 | Symbol | GUI name | Meaning | Default (range) |
 |---|---|---|---|
-| c | Clumsiness | Chance that each eligible word is replaced by a slip | 0.1 (0 to 0.3) |
-| τ | Looseness | Low: nearly always the closest neighbour. High: more distant neighbours | 0.05 (0.01 to 0.3) |
+| c | Clumsiness | Chance that each eligible word is replaced by a slip | 0.2 (0 to 0.3) |
+| τ | Looseness | Low: nearly always the closest neighbour. High: more distant neighbours | 0.08 (0.01 to 0.3) |
 | K | Top-K | Size of the model's shortlist | 100 (10 to 5000) |
 | s | Slip type | 0: substitution, scored against the intended word. 1: intrusion, scored against the previous word. In between: a blend | 0 (0 to 1) |
 | – | Shrug it off | A tick box. After a slip, the next 3 tokens cannot attend to it, which helps the sentence keep its direction. It may read less grammatically | on |
 
 **Shrug it off** hides each slip from the next 3 tokens the model reads, by masking its key in attention. Those tokens are computed as if the slip had not been said. Two things are left unchanged. The token right after the slip is still chosen from the slip's own output, so the slip steers that one word. After 3 tokens the slip becomes visible again. The number 3 is `SHRUG_TOKENS` in `clumsygpt/config.py`.
 
-Looseness above about 0.2 gives mostly noise. About a quarter of generated tokens are eligible for a trial at s = 0, and a fifth at s = 1. At c = 0.1, that means roughly 2 to 3% of words slip.
+Looseness above about 0.2 gives mostly noise. About a quarter of generated tokens are eligible for a trial at s = 0, and a fifth at s = 1. At c = 0.2, that means roughly 4 to 5% of words slip.
 
 ## Observations
 
