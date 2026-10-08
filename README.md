@@ -114,6 +114,7 @@ Tests use fake models, so they need no download: `pip install pytest && pytest`.
 - **Shortlist from the model:** the slip is drawn from the model's own top K, then reweighted by association. This keeps the grammar roughly intact, so the result reads as a human slip and not a glitch.
 - **What counts as a word:** a token that is a space followed by letters. It must be at least three letters and frequent enough in the `wordfreq` list (Zipf 2.5, or 3.5 for three letters and 3.0 for four). Function words are never candidates.
 - **No inflections as slips:** without this filter, most nearest neighbours were grammatical variants ("doctor" to "doctors", "know" to "knew"). Variants are removed by spelling and by dictionary form (`lemminflect`). A few derived forms still get through ("sell" to "sale").
+- **No Chinese, Japanese or Korean:** Qwen is a multilingual model and sometimes drifts into these scripts. Their tokens are removed from the model's output before sampling, so they cannot appear as its own words or as slips. Tokens that decode to a broken character are removed too, so a few rare multi-piece emoji are lost.
 - **Consecutive slips are allowed.** Forbidding them later is a one-line change.
 - **Sampling, not greedy,** for the model's own words. The temperature is fixed.
 
