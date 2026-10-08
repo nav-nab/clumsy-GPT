@@ -22,6 +22,7 @@ image = (
     )
     .add_local_python_source("app", "clumsygpt")
     .add_local_file("openings.txt", "/root/openings.txt")
+    .add_local_file("assets/avatar.svg", "/root/assets/avatar.svg")
 )
 
 app = modal.App("clumsygpt", image=image)

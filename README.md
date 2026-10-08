@@ -1,3 +1,5 @@
+<img src="assets/avatar.svg" alt="ClumsyGPT avatar: a speech bubble with its tongue out" width="150" align="right">
+
 # ClumsyGPT
 
 **A language model that fumbles its words on purpose.**

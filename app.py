@@ -1,5 +1,6 @@
 """The ClumsyGPT inference GUI. Run with: python app.py"""
 
+import base64
 import html
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from clumsygpt import config
 from clumsygpt.generate import ClumsyGenerator
 
 OPENINGS_FILE = Path(__file__).parent / "openings.txt"
+AVATAR_FILE = Path(__file__).parent / "assets" / "avatar.svg"
 
 # A slip is shown by colouring its text. The selectors are two classes deep so that they
 # win over the theme's own text colour.
@@ -55,6 +57,23 @@ VIEW_STYLE = (
     "color: var(--body-text-color); background: var(--input-background-fill); "
     "border: 1px solid var(--border-color-primary); border-radius: var(--radius-lg);"
 )
+
+
+def header_html():
+    """The title and tagline, with the avatar beside them. The avatar is left out if its file is missing."""
+    avatar = ""
+    if AVATAR_FILE.exists():
+        data = base64.b64encode(AVATAR_FILE.read_bytes()).decode()
+        avatar = f'<img src="data:image/svg+xml;base64,{data}" alt="" style="width:72px;height:72px;flex:none">'
+    return (
+        '<div style="display:flex;align-items:center;gap:16px">'
+        f"{avatar}"
+        "<div>"
+        '<h1 style="margin:0;font-size:2em;line-height:1.1">ClumsyGPT</h1>'
+        '<div style="margin-top:4px;color:var(--body-text-color);opacity:0.7">'
+        "A language model that sometimes says the wrong, but related, word.</div>"
+        "</div></div>"
+    )
 
 
 def load_openings():
@@ -133,7 +152,7 @@ def build_app(generator):
 
     with gr.Blocks(title="ClumsyGPT") as demo:
         marked = gr.State([])
-        gr.Markdown("# ClumsyGPT\nA language model that sometimes says the wrong, but related, word.")
+        gr.HTML(header_html())
 
         text = gr.Textbox(
             label="Text", lines=12, max_lines=40,

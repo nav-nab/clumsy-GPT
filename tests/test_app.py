@@ -1,4 +1,5 @@
-from app import join_text, layout, render_marked, summarise, to_marked
+import app
+from app import header_html, join_text, layout, render_marked, summarise, to_marked
 from clumsygpt.generate import Result
 
 RESULT = Result(
@@ -55,6 +56,17 @@ def test_plain_text_box_shows_when_the_text_was_edited():
 def test_plain_text_box_shows_before_anything_is_generated():
     box, view = layout("an opening", [], True)
     assert visible(box) and not visible(view)
+
+
+def test_header_shows_the_avatar_beside_the_title():
+    header = header_html()
+    assert "ClumsyGPT" in header and 'src="data:image/svg+xml;base64,' in header
+
+
+def test_header_still_works_without_the_avatar_file(monkeypatch, tmp_path):
+    monkeypatch.setattr(app, "AVATAR_FILE", tmp_path / "missing.svg")
+    header = header_html()
+    assert "ClumsyGPT" in header and "<img" not in header
 
 
 def test_summary_lists_slips():
