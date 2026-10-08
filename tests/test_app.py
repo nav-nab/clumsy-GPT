@@ -63,6 +63,11 @@ def test_header_shows_the_avatar_beside_the_title():
     assert "ClumsyGPT" in header and 'src="data:image/svg+xml;base64,' in header
 
 
+def test_header_credits_the_author_after_the_tagline():
+    header = header_html()
+    assert header.index("related, word.") < header.index(f"By {app.AUTHOR}.")
+
+
 def test_header_still_works_without_the_avatar_file(monkeypatch, tmp_path):
     monkeypatch.setattr(app, "AVATAR_FILE", tmp_path / "missing.svg")
     header = header_html()
