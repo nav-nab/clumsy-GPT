@@ -8,6 +8,7 @@ SAMPLING_TEMPERATURE = 0.7
 
 # "Shrug it off": after a slip, this many of the following tokens cannot attend to it.
 SHRUG_TOKENS = 3
+SHRUG_OFF_DEFAULT = True  # whether the GUI tick box starts ticked
 
 # A word-start token counts as a whole word if its Zipf frequency (from the
 # wordfreq package) is at least MIN_ZIPF. Zipf 3 means about one in a million words.

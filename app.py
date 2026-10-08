@@ -195,7 +195,7 @@ def build_app(generator):
                 info="0: substitution (the intended word). 1: intrusion (the previous word)",
             )
         shrug_off = gr.Checkbox(
-            value=False, label="Shrug it off",
+            value=config.SHRUG_OFF_DEFAULT, label="Shrug it off",
             info=(
                 f"After a slip, the next {config.SHRUG_TOKENS} tokens ignore it, so the sentence "
                 "keeps its direction. It may read less grammatically."

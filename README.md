@@ -74,7 +74,7 @@ The trial is skipped when a word being scored against is a fragment, a function 
 | τ | Looseness | Low: nearly always the closest neighbour. High: more distant neighbours | 0.05 (0.01 to 0.3) |
 | K | Top-K | Size of the model's shortlist | 100 (10 to 5000) |
 | s | Slip type | 0: substitution, scored against the intended word. 1: intrusion, scored against the previous word. In between: a blend | 0 (0 to 1) |
-| – | Shrug it off | A tick box. After a slip, the next 3 tokens cannot attend to it, which helps the sentence keep its direction. It may read less grammatically | off |
+| – | Shrug it off | A tick box. After a slip, the next 3 tokens cannot attend to it, which helps the sentence keep its direction. It may read less grammatically | on |
 
 **Shrug it off** hides each slip from the next 3 tokens the model reads, by masking its key in attention. Those tokens are computed as if the slip had not been said. Two things are left unchanged. The token right after the slip is still chosen from the slip's own output, so the slip steers that one word. After 3 tokens the slip becomes visible again. The number 3 is `SHRUG_TOKENS` in `clumsygpt/config.py`.
 
