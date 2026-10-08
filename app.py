@@ -150,6 +150,7 @@ def build_app(generator):
         button = gr.Button("Generate", variant="primary")
         stats = gr.Markdown()
 
+        gr.Markdown("## Knobs")
         with gr.Row():
             clumsiness = gr.Slider(
                 config.CLUMSINESS[1], config.CLUMSINESS[2], value=config.CLUMSINESS[0],
