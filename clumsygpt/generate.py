@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 import torch
@@ -17,6 +18,7 @@ class Result:
     slips: list = field(default_factory=list)  # (intended word, slip word) pairs
     trials: int = 0  # Bernoulli trials run, one per eligible word
     tokens: int = 0  # tokens generated
+    done: bool = False  # False for the partial results of a stream, True for the finished one
 
     @property
     def text(self) -> str:
@@ -78,8 +80,15 @@ class ClumsyGenerator:
     def _decode(self, ids):
         return self.tokenizer.decode(ids, clean_up_tokenization_spaces=False)
 
+    def generate(self, *args, **kwargs) -> Result:
+        """Continue the prompt and return the finished Result. Arguments are those of stream."""
+        result = None
+        for result in self.stream(*args, **kwargs):
+            pass
+        return result
+
     @torch.no_grad()
-    def generate(
+    def stream(
         self,
         prompt: str,
         clumsiness: float,
@@ -91,8 +100,9 @@ class ClumsyGenerator:
         seed: int | None = None,
         shrug_off: bool = False,
         shrug_tokens: int = config.SHRUG_TOKENS,
-    ) -> Result:
-        """Continue the prompt. A fresh random seed is used unless seed is given.
+    ) -> Iterator[Result]:
+        """Continue the prompt, yielding the Result so far after each token. The last one is the finished
+        text. A fresh random seed is used unless seed is given.
 
         With shrug_off, each slip is hidden from the next shrug_tokens tokens that are fed to
         the model. They cannot attend to it, so the slip does not steer them. The token after
@@ -134,6 +144,7 @@ class ClumsyGenerator:
 
             generated.append((token, is_slip))
             previous = token
+            yield Result(self._segments(prompt, generated), list(slips), trials, len(generated))
             if step < max_new_tokens - 1:
                 logits, past = self._forward([token], past, length, tuple(shrugging))
                 for position in list(shrugging):
@@ -145,7 +156,7 @@ class ClumsyGenerator:
                     shrugging[length] = shrug_tokens
                 length += 1
 
-        return Result(self._segments(prompt, generated), slips, trials, len(generated))
+        yield Result(self._segments(prompt, generated), slips, trials, len(generated), done=True)
 
     def _segments(self, prompt, generated):
         """Group generated tokens into plain runs and single slip words."""

@@ -140,13 +140,18 @@ def build_app(generator):
     def run(text, clumsiness, looseness, top_k, slip_type, shrug_off, marked, highlight):
         if not text or not text.strip():
             raise gr.Error("Type an opening or pick one from the list.")
-        result = generator.generate(
-            text, clumsiness, looseness, int(top_k), slip_type, shrug_off=shrug_off
-        )
         # Keep the highlights from earlier runs when this continues text that was generated before.
         earlier = marked if marked and join_text(marked) == text else [(text, None)]
-        marked = earlier + to_marked(result)[1:]  # the first segment is the opening itself
-        return (marked, summarise(result)) + layout(join_text(marked), marked, highlight)
+        stream = generator.stream(
+            text, clumsiness, looseness, int(top_k), slip_type, shrug_off=shrug_off
+        )
+        for result in stream:
+            now = earlier + to_marked(result)[1:]  # the first segment is the opening itself
+            status = (
+                summarise(result) if result.done
+                else f"Generating... {result.tokens} of {config.MAX_NEW_TOKENS} tokens"
+            )
+            yield (now, status) + layout(join_text(now), now, highlight)
 
     def on_toggle(text, marked, highlight):
         return layout(text, marked, highlight)

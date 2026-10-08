@@ -177,6 +177,21 @@ def test_chinese_japanese_and_korean_tokens_are_never_produced():
         assert not any(piece in result.text for piece in extra)
 
 
+def test_stream_yields_the_text_so_far_after_each_token():
+    gen = make_generator()
+    results = list(gen.stream(" the cat on", 0.5, 0.1, 1000, 0.0, max_new_tokens=12, seed=2))
+    assert [r.tokens for r in results[:-1]] == list(range(1, 13))
+    assert [r.done for r in results] == [False] * 12 + [True]
+    texts = [r.text for r in results]
+    assert all(later.startswith(earlier) for earlier, later in zip(texts, texts[1:]))
+
+
+def test_generate_returns_the_last_streamed_result():
+    gen = make_generator()
+    streamed = list(gen.stream(" the cat on", 0.5, 0.1, 1000, 0.0, max_new_tokens=20, seed=4))[-1]
+    assert run(gen, clumsiness=0.5, max_new_tokens=20, seed=4).text == streamed.text
+
+
 def test_empty_opening_raises():
     with pytest.raises(ValueError):
         make_generator().generate("", 0.1, 0.1, 1000, 0.0)
