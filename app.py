@@ -208,11 +208,17 @@ def build_app(generator):
 
         demo.load(None, None, None, js=TOOLTIP_JS)
         picker.change(on_pick, picker, [text, marked, view])
-        highlight.change(on_toggle, [text, marked, highlight], [text, view])
+        highlight.change(on_toggle, [text, marked, highlight], [text, view], show_progress="hidden")
         button.click(
             run,
             [text, clumsiness, looseness, top_k, slip_type, shrug_off, marked, highlight],
             [marked, stats, text, view],
+            # Generating takes a while. Keep the text on screen meanwhile (the default progress
+            # overlay blanks the output boxes), show the progress on the status line instead,
+            # and ignore further clicks until this one finishes.
+            show_progress="minimal",
+            show_progress_on=stats,
+            trigger_mode="once",
         )
     return demo
 
