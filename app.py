@@ -133,10 +133,12 @@ def build_app(generator):
         for i, line in enumerate(openings, start=1)
     ]
 
-    def run(text, clumsiness, looseness, top_k, slip_type, marked, highlight):
+    def run(text, clumsiness, looseness, top_k, slip_type, shrug_off, marked, highlight):
         if not text or not text.strip():
             raise gr.Error("Type an opening or pick one from the list.")
-        result = generator.generate(text, clumsiness, looseness, int(top_k), slip_type)
+        result = generator.generate(
+            text, clumsiness, looseness, int(top_k), slip_type, shrug_off=shrug_off
+        )
         # Keep the highlights from earlier runs when this continues text that was generated before.
         earlier = marked if marked and join_text(marked) == text else [(text, None)]
         marked = earlier + to_marked(result)[1:]  # the first segment is the opening itself
@@ -192,13 +194,20 @@ def build_app(generator):
                 step=0.05, label="Slip type",
                 info="0: substitution (the intended word). 1: intrusion (the previous word)",
             )
+        shrug_off = gr.Checkbox(
+            value=False, label="Shrug it off",
+            info=(
+                f"After a slip, the next {config.SHRUG_TOKENS} tokens ignore it, so the sentence "
+                "keeps its direction. It may read less grammatically."
+            ),
+        )
 
         demo.load(None, None, None, js=TOOLTIP_JS)
         picker.change(on_pick, picker, [text, marked, view])
         highlight.change(on_toggle, [text, marked, highlight], [text, view])
         button.click(
             run,
-            [text, clumsiness, looseness, top_k, slip_type, marked, highlight],
+            [text, clumsiness, looseness, top_k, slip_type, shrug_off, marked, highlight],
             [marked, stats, text, view],
         )
     return demo

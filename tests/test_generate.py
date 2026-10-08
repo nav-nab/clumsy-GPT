@@ -36,12 +36,14 @@ class FakeModel:
         self.table[:, EOS] = -1e9  # never stop early
         self.weight = torch.randn(V, 6, generator=g)
         self.calls = []
+        self.masks = []  # the attention mask of each call, as a list of 0s and 1s, or None
 
     def get_input_embeddings(self):
         return SimpleNamespace(weight=self.weight)
 
-    def __call__(self, input_ids, past_key_values=None, use_cache=True):
+    def __call__(self, input_ids, past_key_values=None, use_cache=True, attention_mask=None):
         self.calls.append((input_ids.shape[1], past_key_values is not None))
+        self.masks.append(None if attention_mask is None else attention_mask[0].tolist())
         return SimpleNamespace(logits=self.table[input_ids][None, 0], past_key_values="cache")
 
 
@@ -105,6 +107,56 @@ def test_slip_replaces_the_token_the_model_sees():
     gen = make_generator()
     r = run(gen, clumsiness=1.0, max_new_tokens=10)
     assert r.tokens == 10
+
+
+PROMPT_LENGTH = 3  # " the cat on"
+
+
+def test_no_mask_is_used_unless_shrug_off_is_on():
+    gen = make_generator()
+    run(gen, clumsiness=1.0, max_new_tokens=20)
+    assert all(mask is None for mask in gen.model.masks)
+
+
+def test_no_mask_without_slips_even_when_shrugging():
+    gen = make_generator()
+    run(gen, clumsiness=0.0, max_new_tokens=20, shrug_off=True)
+    assert all(mask is None for mask in gen.model.masks)
+
+
+def test_zero_shrug_tokens_means_no_mask():
+    gen = make_generator()
+    run(gen, clumsiness=1.0, max_new_tokens=20, shrug_off=True, shrug_tokens=0)
+    assert all(mask is None for mask in gen.model.masks)
+
+
+def test_each_slip_is_hidden_from_exactly_the_next_three_tokens_fed():
+    gen = make_generator()
+    run(gen, clumsiness=1.0, max_new_tokens=40, shrug_off=True)
+    masks = gen.model.masks
+    # Every mask covers the whole cache plus the new token.
+    assert all(m is None or len(m) == PROMPT_LENGTH + call for call, m in enumerate(masks))
+    hidden_in = {}  # cache position -> the calls whose mask hides it
+    for call, mask in enumerate(masks):
+        for position, value in enumerate(mask or []):
+            if value == 0:
+                hidden_in.setdefault(position, []).append(call)
+    assert hidden_in
+    for position, calls in hidden_in.items():
+        fed_in = position - PROMPT_LENGTH + 1  # the call that fed the slip itself
+        assert calls == [fed_in + 1, fed_in + 2, fed_in + 3][: len(calls)]  # not hidden from itself
+        if fed_in + 3 < len(masks):
+            assert len(calls) == 3
+    assert any(len(calls) == 3 for calls in hidden_in.values())
+
+
+def test_shrugging_does_not_change_the_text_when_the_model_ignores_the_mask():
+    # The fake model looks only at the last token, so the mask cannot change what it says.
+    # This checks that the bookkeeping does not disturb sampling.
+    gen = make_generator()
+    plain = run(gen, clumsiness=0.5, seed=3)
+    shrug = run(gen, clumsiness=0.5, seed=3, shrug_off=True)
+    assert plain.text == shrug.text
 
 
 def test_empty_opening_raises():

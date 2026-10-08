@@ -60,6 +60,7 @@ ClumsyGPT is a thin layer around ordinary sampling. The transformer is untouched
 4. Score each candidate as `(1 − s) · cos(candidate, discarded word) + s · cos(candidate, previous word)`. Here `cos` is the cosine similarity of token embeddings, and **s** is the slip type. At s = 0 this is pure substitution. At s = 1 it is pure intrusion.
 5. Softmax the scores with temperature **τ** and sample one word. That word is the slip.
 6. The slip goes back into the context, and the model carries on from it.
+7. With **Shrug it off** on, the next 3 tokens cannot attend to the slip. Their attention mask hides it, so the slip does not steer them.
 
 **Allowed words** are whole content words with the same capitalisation as the discarded word. The discarded word and the previous word are left out, along with their case variants and inflections (salt/salts, know/knew).
 
@@ -73,8 +74,19 @@ The trial is skipped when a word being scored against is a fragment, a function 
 | τ | Looseness | Low: nearly always the closest neighbour. High: more distant neighbours | 0.05 (0.01 to 0.3) |
 | K | Top-K | Size of the model's shortlist | 100 (10 to 5000) |
 | s | Slip type | 0: substitution, scored against the intended word. 1: intrusion, scored against the previous word. In between: a blend | 0 (0 to 1) |
+| – | Shrug it off | A tick box. After a slip, the next 3 tokens cannot attend to it, which helps the sentence keep its direction. It may read less grammatically | off |
+
+**Shrug it off** hides each slip from the next 3 tokens the model reads, by masking its key in attention. Those tokens are computed as if the slip had not been said. Two things are left unchanged. The token right after the slip is still chosen from the slip's own output, so the slip steers that one word. After 3 tokens the slip becomes visible again. The number 3 is `SHRUG_TOKENS` in `clumsygpt/config.py`.
 
 Looseness above about 0.2 gives mostly noise. About a quarter of generated tokens are eligible for a trial at s = 0, and a fifth at s = 1. At c = 0.1, that means roughly 2 to 3% of words slip.
+
+## Observations
+
+Informal notes from reading outputs. They are impressions, not measurements.
+
+- **A slip can derail the whole sentence.** Once a different word is in the context, the model treats it as part of the story and carries on from it. The direction of the text can change completely, and not only for the next few words. **Shrug it off** was added to test one fix: hide the slip from the next 3 tokens, accepting a less grammatical sentence in return for keeping its direction.
+- **Raw nearest neighbours are dull.** Without filters, most replacements were grammatical variants of the intended word ("doctor" to "doctors", "know" to "knew"), plus function words and word fragments. Filtering these out is what makes the slips read as slips.
+- **Looseness has a narrow useful range.** Above about 0.2 the replacements stop being related to the intended word and read as noise.
 
 ## Running locally: notes
 

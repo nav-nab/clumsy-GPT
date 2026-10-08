@@ -6,6 +6,9 @@ MODEL_NAME = "Qwen/Qwen2.5-0.5B"
 MAX_NEW_TOKENS = 150
 SAMPLING_TEMPERATURE = 0.7
 
+# "Shrug it off": after a slip, this many of the following tokens cannot attend to it.
+SHRUG_TOKENS = 3
+
 # A word-start token counts as a whole word if its Zipf frequency (from the
 # wordfreq package) is at least MIN_ZIPF. Zipf 3 means about one in a million words.
 # Short strings are more often fragments or abbreviations, so they need a higher

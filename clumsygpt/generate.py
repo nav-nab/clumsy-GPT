@@ -55,10 +55,20 @@ class ClumsyGenerator:
         model = AutoModelForCausalLM.from_pretrained(model_name).float().to(device).eval()
         return cls(model, tokenizer, device)
 
-    def _forward(self, ids, past):
-        """Run the model on new token ids; return next-token logits (on the CPU) and the cache."""
+    def _forward(self, ids, past, length=0, hidden=()):
+        """Run the model on new token ids; return next-token logits (on the CPU) and the cache.
+
+        length is the number of tokens already in the cache. hidden lists cache positions that
+        the new tokens must not attend to. Positions are unchanged: a hidden token still counts
+        as part of the sequence, but the new tokens cannot read it.
+        """
         input_ids = torch.tensor([ids], device=self.device)
-        out = self.model(input_ids=input_ids, past_key_values=past, use_cache=True)
+        kwargs = {}
+        if hidden:
+            mask = torch.ones(1, length + len(ids), dtype=torch.long, device=self.device)
+            mask[0, list(hidden)] = 0
+            kwargs["attention_mask"] = mask
+        out = self.model(input_ids=input_ids, past_key_values=past, use_cache=True, **kwargs)
         return out.logits[0, -1].float().cpu(), out.past_key_values
 
     def _decode(self, ids):
@@ -75,8 +85,15 @@ class ClumsyGenerator:
         max_new_tokens: int = config.MAX_NEW_TOKENS,
         temperature: float = config.SAMPLING_TEMPERATURE,
         seed: int | None = None,
+        shrug_off: bool = False,
+        shrug_tokens: int = config.SHRUG_TOKENS,
     ) -> Result:
-        """Continue the prompt. A fresh random seed is used unless seed is given."""
+        """Continue the prompt. A fresh random seed is used unless seed is given.
+
+        With shrug_off, each slip is hidden from the next shrug_tokens tokens that are fed to
+        the model. They cannot attend to it, so the slip does not steer them. The token after
+        the slip is still chosen from the slip's own output, which cannot be hidden from itself.
+        """
         prompt_ids = self.tokenizer.encode(prompt)
         if not prompt_ids:
             raise ValueError("The opening is empty.")
@@ -87,10 +104,12 @@ class ClumsyGenerator:
             rng.manual_seed(seed)
 
         logits, past = self._forward(prompt_ids, None)
+        length = len(prompt_ids)  # tokens in the cache
         previous = prompt_ids[-1]
         generated = []  # (token id, is_slip)
         slips = []
         trials = 0
+        shrugging = {}  # cache position of a slip -> how many more tokens must not attend to it
 
         for step in range(max_new_tokens):
             probs = torch.softmax(logits / temperature, dim=0)
@@ -112,7 +131,15 @@ class ClumsyGenerator:
             generated.append((token, is_slip))
             previous = token
             if step < max_new_tokens - 1:
-                logits, past = self._forward([token], past)
+                logits, past = self._forward([token], past, length, tuple(shrugging))
+                for position in list(shrugging):
+                    shrugging[position] -= 1
+                    if shrugging[position] == 0:
+                        del shrugging[position]
+                if is_slip and shrug_off and shrug_tokens > 0:
+                    # The slip has just been fed, and it saw itself. The tokens after it must not.
+                    shrugging[length] = shrug_tokens
+                length += 1
 
         return Result(self._segments(prompt, generated), slips, trials, len(generated))
 
