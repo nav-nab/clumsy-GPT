@@ -12,6 +12,7 @@ from clumsygpt.generate import ClumsyGenerator
 OPENINGS_FILE = Path(__file__).parent / "openings.txt"
 AVATAR_FILE = Path(__file__).parent / "assets" / "avatar.svg"
 AUTHOR = "Navid Nabijou"
+AUTHOR_URL = "https://github.com/nav-nab"
 
 # A slip is shown by colouring its text. The selectors are two classes deep so that they
 # win over the theme's own text colour.
@@ -72,7 +73,9 @@ def header_html():
         "<div>"
         '<h1 style="margin:0;font-size:2em;line-height:1.1">ClumsyGPT</h1>'
         '<div style="margin-top:4px;color:var(--body-text-color);opacity:0.7">'
-        f"A language model that sometimes says the wrong, but related, word. By {AUTHOR}.</div>"
+        "A language model that sometimes says the wrong, but related, word. By "
+        f'<a href="{AUTHOR_URL}" target="_blank" rel="noopener" '
+        f'style="color:inherit;text-decoration:underline;margin:0;padding:0">{AUTHOR}</a>.</div>'
         "</div></div>"
     )
 
